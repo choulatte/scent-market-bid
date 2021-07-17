@@ -1,20 +1,19 @@
 package com.choulatte.scentbid.dto
 
 import com.choulatte.scentbid.domain.Bid
-import com.choulatte.scentbid.domain.StatusType
-import org.springframework.data.annotation.LastModifiedDate
+import com.choulatte.scentbid.domain.ProcessingStatusType
 import java.util.*
 
 data class BidDTO(
-    val bidId: Long? = null,
-    val productId: Long? = null,
-    val userId: Long? = null,
-    val biddingPrice: Long? = null,
-    var status: StatusType,
-    var holdingId: Long,
-    val initializedDate: Date,
-    val lastModifiedDate: Date? = null,
-    var expiredDate: Date
+    private val bidId: Long? = null,
+    private val productId: Long? = null,
+    private val userId: Long? = null,
+    private val biddingPrice: Long? = null,
+    private var processingStatus: ProcessingStatusType,
+    private var holdingId: Long,
+    private val initializedDate: Date,
+    private val lastModifiedDate: Date? = null,
+    private var expiredDate: Date
 ) {
     fun toEntity() : Bid {
         return Bid(
@@ -22,7 +21,7 @@ data class BidDTO(
             productId = this.productId,
             userId = this.userId,
             biddingPrice = this.biddingPrice,
-            status = this.status,
+            processingStatus = this.processingStatus,
             holdingId = this.holdingId,
             lastModifiedDate = Date(),
             expiredDate = this.expiredDate
