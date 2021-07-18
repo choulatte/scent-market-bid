@@ -2,17 +2,18 @@ package com.choulatte.scentbid.dto
 
 import com.choulatte.scentbid.domain.Bid
 import com.choulatte.scentbid.domain.ProcessingStatusType
+import lombok.Getter
 import java.util.*
 
 data class BidDTO(
-    private val bidId: Long? = null,
-    private val productId: Long? = null,
-    private val userId: Long? = null,
-    private val biddingPrice: Long? = null,
+    val bidId: Long? = null,
+    private val productId: Long,
+    val userId: Long,
+    private val biddingPrice: Long,
     private var processingStatus: ProcessingStatusType,
-    private var holdingId: Long,
-    private val initializedDate: Date,
-    private val lastModifiedDate: Date? = null,
+    private var holdingId: Long? = null,
+    private val recordedDate: Date,
+    private val lastModifiedDate: Date,
     private var expiredDate: Date
 ) {
     fun toEntity() : Bid {
@@ -27,4 +28,5 @@ data class BidDTO(
             expiredDate = this.expiredDate
         )
     }
+
 }

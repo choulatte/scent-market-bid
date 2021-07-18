@@ -3,6 +3,7 @@ package com.choulatte.scentbid.domain
 import com.choulatte.scentbid.dto.BidDTO
 import java.util.*
 import javax.persistence.*
+import kotlin.RuntimeException
 
 @Entity
 @Table(name = "bid")
@@ -13,23 +14,23 @@ class Bid(
     private val bidId: Long? = null,
 
     @Column(nullable = false, name = "product_idx")
-    private val productId: Long? = null,
+    private val productId: Long,
 
     @Column(name = "user_idx")
-    private val userId: Long? = null,
+    private val userId: Long,
 
     @Column(name = "bidding_price")
-    private val biddingPrice: Long? = null,
+    private val biddingPrice: Long,
 
     @Column(name = "status")
-    private var processingStatus: ProcessingStatusType = ProcessingStatusType.INITIALIZED,
+    private var processingStatus: ProcessingStatusType,
 
     @Column(name = "holding_id")
-    private var holdingId: Long,
+    private var holdingId: Long? = null,
 
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "initialized_date")
-    private var initializedDate: Date = Date(),
+    @Column(name = "recorded_date")
+    private var recordedDate: Date = Date(),
 
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "last_modified_date")
@@ -48,7 +49,7 @@ class Bid(
             biddingPrice = this.biddingPrice,
             processingStatus = this.processingStatus,
             holdingId = this.holdingId,
-            initializedDate = this.initializedDate ?: Date(),
+            recordedDate = this.recordedDate,
             lastModifiedDate = this.lastModifiedDate,
             expiredDate = this.expiredDate
         )

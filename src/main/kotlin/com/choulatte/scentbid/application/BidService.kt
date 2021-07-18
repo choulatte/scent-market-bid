@@ -1,15 +1,11 @@
 package com.choulatte.scentbid.application
 
 import com.choulatte.scentbid.dto.BidDTO
-import com.choulatte.scentbid.domain.ProcessingStatusType
-import java.util.*
+import com.choulatte.scentbid.dto.BidCreateReqDTO
+import com.choulatte.scentbid.dto.BidReqDTO
 
 interface BidService {
-    fun getBidList(): List<BidDTO>
-    fun getBidListByProduct(productId: Long): List<BidDTO>
-    fun getBidListByProductAndBiddingTime(productId: Long, biddingTime: Date): List<BidDTO>
-    fun getBidListByProductAndStatus(productId: Long, processingStatusType: ProcessingStatusType): List<BidDTO>
+    fun getBidListByProduct(bidReqDTO: BidReqDTO): List<BidDTO>
 
-    fun createBid(bidDTO: BidDTO): BidDTO
-    fun updateBidStatus(bidDTO: BidDTO, processingStatusType: ProcessingStatusType): BidDTO
+    fun createBid(bidCreateReqDTO: BidCreateReqDTO): BidDTO
 }
