@@ -19,6 +19,9 @@ class Bid(
     @Column(name = "user_idx")
     private val userId: Long,
 
+    @Column(name = "account_idx")
+    private val accountId: Long,
+
     @Column(name = "bidding_price")
     private val biddingPrice: Long,
 
@@ -46,6 +49,7 @@ class Bid(
             bidId = this.bidId,
             productId = this.productId,
             userId = this.userId,
+            accountId = this.accountId,
             biddingPrice = this.biddingPrice,
             processingStatus = this.processingStatus,
             holdingId = this.holdingId,

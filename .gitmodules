@@ -1,0 +1,3 @@
+[submodule "scent-market-grpc"]
+	path = scent-market-grpc
+	url = https://github.com/choulatte/scent-market-grpc.git
