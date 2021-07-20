@@ -10,4 +10,5 @@ import java.util.*
 interface BidRepository : JpaRepository<Bid, Long> {
     fun findAllByProductId(productId: Long): List<Bid>
     fun findByHoldingId(holdingId: Long): Bid
+    fun findAllByProductIdAndRecordedDateBeforeAndProcessingStatus(productId: Long, recordedDate: Date, processingStatusType: ProcessingStatusType): List<Bid>
 }

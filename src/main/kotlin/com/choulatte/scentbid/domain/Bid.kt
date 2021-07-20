@@ -73,4 +73,16 @@ class Bid(
         this.expiredDate = expiredDate
         return this
     }
+
+    fun getAccountId(): Long {
+        return this.accountId
+    }
+
+    fun getHoldingId(): Long? {
+        return this.holdingId
+    }
+
+    fun getUserId(): Long {
+        return this.userId
+    }
 }

@@ -7,13 +7,13 @@ import java.util.*
 
 data class BidDTO(
     val bidId: Long? = null,
-    private val productId: Long,
+    val productId: Long,
     val userId: Long,
     private val accountId: Long,
     private val biddingPrice: Long,
     private var processingStatus: ProcessingStatusType,
     private var holdingId: Long? = null,
-    private val recordedDate: Date,
+    val recordedDate: Date,
     private val lastModifiedDate: Date,
     private var expiredDate: Date
 ) {
