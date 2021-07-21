@@ -9,6 +9,7 @@ import java.util.*
 @Repository
 interface BidRepository : JpaRepository<Bid, Long> {
     fun findAllByProductId(productId: Long): List<Bid>
+    fun findTopByProductIdOrderByBiddingPriceDesc(productId: Long): Bid?=null
     fun findByHoldingId(holdingId: Long): Bid
-    fun findAllByProductIdAndRecordedDateBeforeAndProcessingStatus(productId: Long, recordedDate: Date, processingStatusType: ProcessingStatusType): List<Bid>
+    fun findTopByProductIdAndProcessingStatusOrderByRecordedDateDesc(productId: Long, processingStatusType: ProcessingStatusType): Bid?= null
 }

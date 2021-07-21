@@ -11,6 +11,7 @@ import com.choulatte.scentbid.exception.*
 import com.choulatte.scentbid.repository.BidRepository
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
+import org.aspectj.weaver.tools.cache.AsynchronousFileCacheBacking
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
@@ -34,7 +35,7 @@ class BidServiceImpl(private val bidRepository: BidRepository): BidService {
     @Transactional
     override fun createBid(bidCreateReqDTO: BidCreateReqDTO): BidDTO {
 
-        when(verifyBiddingPrice(bidCreateReqDTO.biddingPrice)){
+        when(verifyBiddingPrice(bidCreateReqDTO.biddingPrice, bidCreateReqDTO.productId)){
             false -> throw BiddingPriceNotValid()
         }
 
@@ -46,7 +47,6 @@ class BidServiceImpl(private val bidRepository: BidRepository): BidService {
                 .build())
             .setUserId(bidCreateReqDTO.userId).build())
 
-        // TODO("Clear Holding after save")
        when(response.result.result) {
            PaymentServiceOuterClass.Response.Result.OK -> return holdingAndClear(bidCreateReqDTO.toBidDTO(), response.holding.id)
            PaymentServiceOuterClass.Response.Result.CONFLICT -> throw HoldingIllegalStateException()
@@ -57,23 +57,11 @@ class BidServiceImpl(private val bidRepository: BidRepository): BidService {
 
     }
 
-    private fun findBidById(bidId: Long): Bid {
-        return bidRepository.findById(bidId).get()
-    }
-
     private fun findByHoldingId(holdingId: Long): Bid {
         return bidRepository.findByHoldingId(holdingId)
     }
 
-    private fun updateHoldingExpiredDate(holdingId: Long, expiredDate: Date) {
-        bidRepository.save(findByHoldingId(holdingId).updateExpiredDate(expiredDate).updateStatus(ProcessingStatusType.HOLDING_EXTENDED))
-    }
-
-    private fun clearHolding(holdingId: Long) {
-        bidRepository.save(findByHoldingId(holdingId).updateStatus(ProcessingStatusType.HOLDING_CLEARED))
-    }
-
-    private fun verifyBiddingPrice(biddingPrice: Long) : Boolean {
+    private fun verifyBiddingPrice(biddingPrice: Long, productId: Long) : Boolean {
         val unitPrice: Long = when(biddingPrice){
             in 0 until 5000 -> 100
             in 5000 until 10000 -> 500
@@ -83,7 +71,7 @@ class BidServiceImpl(private val bidRepository: BidRepository): BidService {
             else -> throw BiddingPriceNotValid()
         }
 
-        return checkUnitPrice(biddingPrice, unitPrice)
+        return checkUnitPrice(biddingPrice, unitPrice) && checkPriceLarger(biddingPrice, productId)
     }
 
     private fun checkUnitPrice(biddingPrice: Long, unitPrice: Long) : Boolean {
@@ -93,30 +81,40 @@ class BidServiceImpl(private val bidRepository: BidRepository): BidService {
         }
     }
 
-    private fun holdingAndClear(bidDTO: BidDTO, holdingId: Long) : BidDTO {
-        val bid = bidRepository.save(bidDTO.toEntity().updateHoldingId(holdingId).updateStatus(ProcessingStatusType.HOLDING)).toDTO()
-        val toClear = bidRepository.findAllByProductIdAndRecordedDateBeforeAndProcessingStatus(bid.productId, bid.recordedDate, ProcessingStatusType.HOLDING)
-        when(toClear.size){
-            //TODO("Check logic and change it")
-            1 -> return bid
-            2 -> {
-                val response = stub.clearHolding(PaymentServiceOuterClass.HoldingRequest.newBuilder()
-                    .setHolding(PaymentServiceOuterClass.Holding.newBuilder()
-                        .setAccountId(toClear[0].getAccountId())
-                        .setId(toClear[0].getHoldingId() ?: throw IllegalArgumentException("There is no holdingId to clear!"))
-                        .build())
-                    .setUserId(toClear[0].getUserId()).build())
+    private fun checkPriceLarger(biddingPrice: Long, productId: Long) : Boolean {
+        val compareTarget = bidRepository.findTopByProductIdOrderByBiddingPriceDesc(productId) ?: return true
 
-                when(response.result){
-                    PaymentServiceOuterClass.Response.Result.OK -> bidRepository.save(toClear[0].updateStatus(ProcessingStatusType.HOLDING_CLEARED))
-                    PaymentServiceOuterClass.Response.Result.CONFLICT -> throw HoldingIllegalStateException()
-                    PaymentServiceOuterClass.Response.Result.BAD_REQUEST -> throw HoldingBadRequestException()
-                    PaymentServiceOuterClass.Response.Result.NOT_FOUND -> throw HoldingNotFoundException()
-                    else -> throw RuntimeException("Unrecognized exception!!!")
-                }
-            }
-            else -> throw IllegalStateException("Clear target bid should be one or not!")
+        return when(biddingPrice > compareTarget.getBiddingPrice()){
+            false -> false
+            true -> true
         }
+    }
+
+    private fun holdingAndClear(bidDTO: BidDTO, holdingId: Long) : BidDTO {
+        val clearTarget = bidRepository.findTopByProductIdAndProcessingStatusOrderByRecordedDateDesc(bidDTO.productId, ProcessingStatusType.HOLDING)
+        val bid = bidRepository.save(bidDTO.toEntity().updateHoldingId(holdingId).updateStatus(ProcessingStatusType.HOLDING)).toDTO()
+
+        clear(clearTarget ?: return bid)
+
         return  bid
     }
+
+    private fun clear(clearTarget: Bid) {
+        val response = stub.clearHolding(PaymentServiceOuterClass.HoldingRequest.newBuilder()
+            .setHolding(PaymentServiceOuterClass.Holding.newBuilder()
+                .setAccountId(clearTarget.getAccountId())
+                .setId(clearTarget.getHoldingId() ?: throw IllegalArgumentException("There is no holdingId to clear!"))
+                .build())
+            .setUserId(clearTarget.getUserId()).build())
+
+        when(response.result){
+            PaymentServiceOuterClass.Response.Result.OK -> bidRepository.save(clearTarget.updateStatus(ProcessingStatusType.HOLDING_CLEARED))
+            PaymentServiceOuterClass.Response.Result.CONFLICT -> throw HoldingIllegalStateException()
+            PaymentServiceOuterClass.Response.Result.BAD_REQUEST -> throw HoldingBadRequestException()
+            PaymentServiceOuterClass.Response.Result.NOT_FOUND -> throw HoldingNotFoundException()
+            else -> throw RuntimeException("Unrecognized exception!!!")
+        }
+    }
+
+
 }

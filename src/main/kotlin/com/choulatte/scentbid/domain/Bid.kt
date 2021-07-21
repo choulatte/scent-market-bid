@@ -85,4 +85,8 @@ class Bid(
     fun getUserId(): Long {
         return this.userId
     }
+
+    fun getBiddingPrice(): Long {
+        return this.biddingPrice
+    }
 }
