@@ -11,7 +11,6 @@ import com.choulatte.scentbid.exception.*
 import com.choulatte.scentbid.repository.BidRepository
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
-import org.aspectj.weaver.tools.cache.AsynchronousFileCacheBacking
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
@@ -52,7 +51,7 @@ class BidServiceImpl(private val bidRepository: BidRepository): BidService {
            PaymentServiceOuterClass.Response.Result.CONFLICT -> throw HoldingIllegalStateException()
            PaymentServiceOuterClass.Response.Result.BAD_REQUEST -> throw HoldingBadRequestException()
            PaymentServiceOuterClass.Response.Result.NOT_FOUND -> throw HoldingNotFoundException()
-           else -> throw RuntimeException("Unrecognized exception!!!")
+           else -> throw GrpcIllegalStateException("Create Holding Illegal State Exception")
        }
 
     }
@@ -112,9 +111,27 @@ class BidServiceImpl(private val bidRepository: BidRepository): BidService {
             PaymentServiceOuterClass.Response.Result.CONFLICT -> throw HoldingIllegalStateException()
             PaymentServiceOuterClass.Response.Result.BAD_REQUEST -> throw HoldingBadRequestException()
             PaymentServiceOuterClass.Response.Result.NOT_FOUND -> throw HoldingNotFoundException()
-            else -> throw RuntimeException("Unrecognized exception!!!")
+            else -> throw GrpcIllegalStateException("Holding Clear Illegal State Exception")
         }
     }
 
+    private fun updateHoldingExpiredDate(holdingId: Long, accountId:Long, userId: Long, expiredDate: Date) : Boolean {
+        val response = stub.extendHolding(PaymentServiceOuterClass.HoldingRequest.newBuilder()
+            .setHolding(PaymentServiceOuterClass.Holding.newBuilder()
+                .setId(holdingId)
+                .setAccountId(accountId)
+                .setExpiredDate(expiredDate.time)
+                .build())
+            .setUserId(userId).build())
 
+        when(response.result.result){
+            PaymentServiceOuterClass.Response.Result.OK -> bidRepository.save(findByHoldingId(holdingId).updateExpiredDate(expiredDate).updateStatus(ProcessingStatusType.HOLDING_EXTENDED))
+            PaymentServiceOuterClass.Response.Result.CONFLICT -> throw HoldingIllegalStateException()
+            PaymentServiceOuterClass.Response.Result.BAD_REQUEST -> throw HoldingBadRequestException()
+            PaymentServiceOuterClass.Response.Result.NOT_FOUND -> throw HoldingNotFoundException()
+            else -> throw GrpcIllegalStateException("Holding Extend Illegal State Exception")
+        }
+
+        return true
+    }
 }
