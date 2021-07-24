@@ -10,11 +10,11 @@ import springfox.documentation.spring.web.plugins.Docket
 @Configuration
 class SwaggerConfig {
     @Bean
-    fun api(): Docket? {
-        return Docket(DocumentationType.OAS_30)
+    fun api(): Docket? =
+        Docket(DocumentationType.OAS_30)
             .select()
             .apis(RequestHandlerSelectors.any())
             .paths(PathSelectors.any())
             .build()
-    }
+
 }

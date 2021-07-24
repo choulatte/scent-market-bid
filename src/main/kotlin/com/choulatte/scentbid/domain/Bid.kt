@@ -74,19 +74,11 @@ class Bid(
         return this
     }
 
-    fun getAccountId(): Long {
-        return this.accountId
-    }
+    fun getAccountId(): Long = this.accountId
 
-    fun getHoldingId(): Long? {
-        return this.holdingId
-    }
+    fun getHoldingId(): Long? = this.holdingId
 
-    fun getUserId(): Long {
-        return this.userId
-    }
+    fun getUserId(): Long = this.userId
 
-    fun getBiddingPrice(): Long {
-        return this.biddingPrice
-    }
+    fun getBiddingPrice(): Long = this.biddingPrice
 }

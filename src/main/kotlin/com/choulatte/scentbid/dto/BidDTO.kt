@@ -17,8 +17,8 @@ data class BidDTO(
     private val lastModifiedDate: Date,
     private var expiredDate: Date
 ) {
-    fun toEntity() : Bid {
-        return Bid(
+    fun toEntity() : Bid =
+        Bid(
             bidId = this.bidId,
             productId = this.productId,
             userId = this.userId,
@@ -29,6 +29,5 @@ data class BidDTO(
             lastModifiedDate = Date(),
             expiredDate = this.expiredDate
         )
-    }
 
 }

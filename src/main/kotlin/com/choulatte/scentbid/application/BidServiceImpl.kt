@@ -1,5 +1,6 @@
 package com.choulatte.scentbid.application
 
+import com.choulatte.pay.grpc.PaymentServiceOuterClass.Response.Result
 import com.choulatte.pay.grpc.PaymentServiceGrpc
 import com.choulatte.pay.grpc.PaymentServiceOuterClass
 import com.choulatte.scentbid.domain.Bid
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.util.*
 import java.util.stream.Collectors
 
+
 @Service
 class BidServiceImpl(private val bidRepository: BidRepository): BidService {
 
@@ -26,9 +28,9 @@ class BidServiceImpl(private val bidRepository: BidRepository): BidService {
     private val stub: PaymentServiceGrpc.PaymentServiceBlockingStub = PaymentServiceGrpc.newBlockingStub(channel)
 
     // 상품별 호가 리스트 조회
-    override fun getBidListByProduct(bidReqDTO: BidReqDTO): List<BidDTO> {
-        return bidRepository.findAllByProductId(bidReqDTO.productId ?: throw BidRequestNotAvailable()).stream().map(Bid::toDTO).collect(Collectors.toList())
-    }
+    override fun getBidListByProduct(bidReqDTO: BidReqDTO): List<BidDTO> =
+        bidRepository.findAllByProductId(bidReqDTO.productId ?: throw BidRequestNotAvailable()).stream().map(Bid::toDTO).collect(Collectors.toList())
+
 
     // 사용자가 호가를 눌렀을 때 bid를 생성함
     @Transactional
@@ -47,18 +49,17 @@ class BidServiceImpl(private val bidRepository: BidRepository): BidService {
             .setUserId(bidCreateReqDTO.userId).build())
 
        when(response.result.result) {
-           PaymentServiceOuterClass.Response.Result.OK -> return holdingAndClear(bidCreateReqDTO.toBidDTO(), response.holding.id)
-           PaymentServiceOuterClass.Response.Result.CONFLICT -> throw HoldingIllegalStateException()
-           PaymentServiceOuterClass.Response.Result.BAD_REQUEST -> throw HoldingBadRequestException()
-           PaymentServiceOuterClass.Response.Result.NOT_FOUND -> throw HoldingNotFoundException()
-           else -> throw GrpcIllegalStateException("Create Holding Illegal State Exception")
+           Result.OK -> return holdingAndClear(bidCreateReqDTO.toBidDTO(), response.holding.id)
+           Result.CONFLICT -> throw HoldingIllegalStateException()
+           Result.BAD_REQUEST -> throw HoldingBadRequestException()
+           Result.NOT_FOUND -> throw HoldingNotFoundException()
+           // Create Holding Illegal State Exception
+           else -> throw GrpcIllegalStateException()
        }
 
     }
 
-    private fun findByHoldingId(holdingId: Long): Bid {
-        return bidRepository.findByHoldingId(holdingId)
-    }
+    private fun findByHoldingId(holdingId: Long): Bid = bidRepository.findByHoldingId(holdingId)
 
     private fun verifyBiddingPrice(biddingPrice: Long, productId: Long) : Boolean {
         val unitPrice: Long = when(biddingPrice){
@@ -73,27 +74,28 @@ class BidServiceImpl(private val bidRepository: BidRepository): BidService {
         return checkUnitPrice(biddingPrice, unitPrice) && checkPriceLarger(biddingPrice, productId)
     }
 
-    private fun checkUnitPrice(biddingPrice: Long, unitPrice: Long) : Boolean {
-        return when(biddingPrice % unitPrice) {
+    private fun checkUnitPrice(biddingPrice: Long, unitPrice: Long) : Boolean =
+        when(biddingPrice % unitPrice) {
             0L -> true
             else -> false
         }
-    }
 
-    private fun checkPriceLarger(biddingPrice: Long, productId: Long) : Boolean {
-        val compareTarget = bidRepository.findTopByProductIdOrderByBiddingPriceDesc(productId) ?: return true
+    fun checkPriceLarger(biddingPrice: Long, productId: Long) : Boolean =
+         when(val compareTarget = bidRepository.findTopByProductIdOrderByBiddingPriceDesc(productId)) {
+             null -> true
+             else -> when(biddingPrice > compareTarget.getBiddingPrice()) {
+                 false -> false
+                 true -> true
+             }
+         }
 
-        return when(biddingPrice > compareTarget.getBiddingPrice()){
-            false -> false
-            true -> true
-        }
-    }
+
 
     private fun holdingAndClear(bidDTO: BidDTO, holdingId: Long) : BidDTO {
-        val clearTarget = bidRepository.findTopByProductIdAndProcessingStatusOrderByRecordedDateDesc(bidDTO.productId, ProcessingStatusType.HOLDING)
         val bid = bidRepository.save(bidDTO.toEntity().updateHoldingId(holdingId).updateStatus(ProcessingStatusType.HOLDING)).toDTO()
+        val clearTarget = bidRepository.findTopByProductIdAndProcessingStatusOrderByRecordedDateDesc(bidDTO.productId, ProcessingStatusType.HOLDING) ?: return bid
 
-        clear(clearTarget ?: return bid)
+        clear(clearTarget)
 
         return  bid
     }
@@ -107,11 +109,12 @@ class BidServiceImpl(private val bidRepository: BidRepository): BidService {
             .setUserId(clearTarget.getUserId()).build())
 
         when(response.result){
-            PaymentServiceOuterClass.Response.Result.OK -> bidRepository.save(clearTarget.updateStatus(ProcessingStatusType.HOLDING_CLEARED))
-            PaymentServiceOuterClass.Response.Result.CONFLICT -> throw HoldingIllegalStateException()
-            PaymentServiceOuterClass.Response.Result.BAD_REQUEST -> throw HoldingBadRequestException()
-            PaymentServiceOuterClass.Response.Result.NOT_FOUND -> throw HoldingNotFoundException()
-            else -> throw GrpcIllegalStateException("Holding Clear Illegal State Exception")
+            Result.OK -> bidRepository.save(clearTarget.updateStatus(ProcessingStatusType.HOLDING_CLEARED))
+            Result.CONFLICT -> throw HoldingIllegalStateException()
+            Result.BAD_REQUEST -> throw HoldingBadRequestException()
+            Result.NOT_FOUND -> throw HoldingNotFoundException()
+            // Holding Clear Illegal State Exception
+            else -> throw GrpcIllegalStateException()
         }
     }
 
@@ -125,11 +128,12 @@ class BidServiceImpl(private val bidRepository: BidRepository): BidService {
             .setUserId(userId).build())
 
         when(response.result.result){
-            PaymentServiceOuterClass.Response.Result.OK -> bidRepository.save(findByHoldingId(holdingId).updateExpiredDate(expiredDate).updateStatus(ProcessingStatusType.HOLDING_EXTENDED))
-            PaymentServiceOuterClass.Response.Result.CONFLICT -> throw HoldingIllegalStateException()
-            PaymentServiceOuterClass.Response.Result.BAD_REQUEST -> throw HoldingBadRequestException()
-            PaymentServiceOuterClass.Response.Result.NOT_FOUND -> throw HoldingNotFoundException()
-            else -> throw GrpcIllegalStateException("Holding Extend Illegal State Exception")
+            Result.OK -> bidRepository.save(findByHoldingId(holdingId).updateExpiredDate(expiredDate).updateStatus(ProcessingStatusType.HOLDING_EXTENDED))
+            Result.CONFLICT -> throw HoldingIllegalStateException()
+            Result.BAD_REQUEST -> throw HoldingBadRequestException()
+            Result.NOT_FOUND -> throw HoldingNotFoundException()
+            // Holding Extend Illegal State Exception
+            else -> throw GrpcIllegalStateException()
         }
 
         return true

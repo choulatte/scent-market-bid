@@ -10,8 +10,8 @@ data class BidCreateReqDTO(
     val biddingPrice: Long,
     val expiredDate: Date
 ){
-    fun toBidDTO(): BidDTO {
-        return BidDTO(
+    fun toBidDTO(): BidDTO =
+        BidDTO(
             productId = this.productId,
             userId = this.userId,
             accountId = this.accountId,
@@ -21,5 +21,5 @@ data class BidCreateReqDTO(
             expiredDate = this.expiredDate,
             processingStatus = ProcessingStatusType.INITIALIZED
         )
-    }
+
 }

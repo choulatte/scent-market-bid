@@ -15,12 +15,9 @@ class BidController
     (private val bidService: BidService){
 
     @GetMapping(value = ["/product"])
-    fun getProductBids(@RequestBody bidReqDTO: BidReqDTO): ResponseEntity<List<BidDTO>> {
-        return ResponseEntity.ok(bidService.getBidListByProduct(bidReqDTO))
-    }
+    fun getProductBids(@RequestBody bidReqDTO: BidReqDTO): ResponseEntity<List<BidDTO>> = ResponseEntity.ok(bidService.getBidListByProduct(bidReqDTO))
+
 
     @PostMapping(value = ["/product"])
-    fun createBid(@RequestBody bidCreateReqDTO: BidCreateReqDTO): ResponseEntity<BidDTO> {
-        return ResponseEntity.ok(bidService.createBid(bidCreateReqDTO))
-    }
+    fun createBid(@RequestBody bidCreateReqDTO: BidCreateReqDTO): ResponseEntity<BidDTO> = ResponseEntity.ok(bidService.createBid(bidCreateReqDTO))
 }
