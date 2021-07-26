@@ -11,7 +11,7 @@ import com.choulatte.scentbid.dto.BidReqDTO
 import com.choulatte.scentbid.exception.*
 import com.choulatte.scentbid.repository.BidRepository
 import io.grpc.ManagedChannel
-import io.grpc.ManagedChannelBuilder
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
@@ -19,13 +19,11 @@ import java.util.stream.Collectors
 
 
 @Service
-class BidServiceImpl(private val bidRepository: BidRepository): BidService {
-
-    private val channel: ManagedChannel = ManagedChannelBuilder
-        .forAddress("172.20.10.3", 8090)
-        .usePlaintext().build()
-
-    private val stub: PaymentServiceGrpc.PaymentServiceBlockingStub = PaymentServiceGrpc.newBlockingStub(channel)
+class BidServiceImpl(
+    private val bidRepository: BidRepository,
+    @Qualifier(value = "pay")
+    private val payChannel: ManagedChannel
+    ): BidService {
 
     // 상품별 호가 리스트 조회
     override fun getBidListByProduct(bidReqDTO: BidReqDTO): List<BidDTO> =
@@ -35,6 +33,7 @@ class BidServiceImpl(private val bidRepository: BidRepository): BidService {
     // 사용자가 호가를 눌렀을 때 bid를 생성함
     @Transactional
     override fun createBid(bidCreateReqDTO: BidCreateReqDTO): BidDTO {
+        val stub: PaymentServiceGrpc.PaymentServiceBlockingStub = PaymentServiceGrpc.newBlockingStub(payChannel)
 
         when(verifyBiddingPrice(bidCreateReqDTO.biddingPrice, bidCreateReqDTO.productId)){
             false -> throw BiddingPriceNotValid()
@@ -101,6 +100,8 @@ class BidServiceImpl(private val bidRepository: BidRepository): BidService {
     }
 
     private fun clear(clearTarget: Bid) {
+        val stub: PaymentServiceGrpc.PaymentServiceBlockingStub = PaymentServiceGrpc.newBlockingStub(payChannel)
+
         val response = stub.clearHolding(PaymentServiceOuterClass.HoldingRequest.newBuilder()
             .setHolding(PaymentServiceOuterClass.Holding.newBuilder()
                 .setAccountId(clearTarget.getAccountId())
@@ -119,6 +120,8 @@ class BidServiceImpl(private val bidRepository: BidRepository): BidService {
     }
 
     private fun updateHoldingExpiredDate(holdingId: Long, accountId:Long, userId: Long, expiredDate: Date) : Boolean {
+        val stub: PaymentServiceGrpc.PaymentServiceBlockingStub = PaymentServiceGrpc.newBlockingStub(payChannel)
+
         val response = stub.extendHolding(PaymentServiceOuterClass.HoldingRequest.newBuilder()
             .setHolding(PaymentServiceOuterClass.Holding.newBuilder()
                 .setId(holdingId)
