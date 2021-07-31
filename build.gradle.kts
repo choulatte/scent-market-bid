@@ -34,6 +34,7 @@ dependencies {
     implementation("io.grpc:grpc-netty:1.38.0")
     implementation("io.grpc:grpc-protobuf:1.38.0")
     implementation("io.grpc:grpc-stub:1.38.0")
+    implementation("it.ozimov:embedded-redis:0.7.2")
     compileOnly("org.projectlombok:lombok")
     runtimeOnly ("mysql:mysql-connector-java")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
