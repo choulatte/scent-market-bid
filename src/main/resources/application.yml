@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: bid
+  datasource:
+    url: jdbc:mysql://115.138.67.190/scent_bid?autoReconnect=true&useSSL=false&characterEncoding=utf8
+    username: username
+    password: password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    generate-ddl: false
+    hibernate:
+      ddl-auto: create
+    show-sql: true
+  redis:
+    host: localhost
+    port: 6379
