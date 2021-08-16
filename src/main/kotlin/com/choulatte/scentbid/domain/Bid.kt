@@ -26,7 +26,7 @@ class Bid(
     private val biddingPrice: Long,
 
     @Column(name = "status")
-    private var processingStatus: ProcessingStatusType,
+    private var processingStatus: StatusType,
 
     @Column(name = "holding_id")
     private var holdingId: Long? = null,
@@ -59,7 +59,7 @@ class Bid(
         )
     }
 
-    fun updateStatus(processingStatus: ProcessingStatusType): Bid {
+    fun updateStatus(processingStatus: StatusType): Bid {
         this.processingStatus = processingStatus
         return this
     }
@@ -81,4 +81,8 @@ class Bid(
     fun getUserId(): Long = this.userId
 
     fun getBiddingPrice(): Long = this.biddingPrice
+
+    enum class StatusType {
+        INITIALIZED, HOLDING, HOLDING_EXTENDED, HOLDING_CLEARED;
+    }
 }

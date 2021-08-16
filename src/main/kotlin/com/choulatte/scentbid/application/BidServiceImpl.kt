@@ -4,7 +4,6 @@ import com.choulatte.pay.grpc.PaymentServiceOuterClass.Response.Result
 import com.choulatte.pay.grpc.PaymentServiceGrpc
 import com.choulatte.pay.grpc.PaymentServiceOuterClass
 import com.choulatte.scentbid.domain.Bid
-import com.choulatte.scentbid.domain.ProcessingStatusType
 import com.choulatte.scentbid.dto.BidCreateReqDTO
 import com.choulatte.scentbid.dto.BidDTO
 import com.choulatte.scentbid.dto.BidReqDTO
@@ -91,8 +90,8 @@ class BidServiceImpl(
 
 
     private fun holdingAndClear(bidDTO: BidDTO, holdingId: Long) : BidDTO {
-        val bid = bidRepository.save(bidDTO.toEntity().updateHoldingId(holdingId).updateStatus(ProcessingStatusType.HOLDING)).toDTO()
-        val clearTarget = bidRepository.findTopByProductIdAndProcessingStatusOrderByRecordedDateDesc(bidDTO.productId, ProcessingStatusType.HOLDING) ?: return bid
+        val bid = bidRepository.save(bidDTO.toEntity().updateHoldingId(holdingId).updateStatus(Bid.StatusType.HOLDING)).toDTO()
+        val clearTarget = bidRepository.findTopByProductIdAndProcessingStatusOrderByRecordedDateDesc(bidDTO.productId, Bid.StatusType.HOLDING) ?: return bid
 
         clear(clearTarget)
 
@@ -110,7 +109,7 @@ class BidServiceImpl(
             .setUserId(clearTarget.getUserId()).build())
 
         when(response.result){
-            Result.OK -> bidRepository.save(clearTarget.updateStatus(ProcessingStatusType.HOLDING_CLEARED))
+            Result.OK -> bidRepository.save(clearTarget.updateStatus(Bid.StatusType.HOLDING_CLEARED))
             Result.CONFLICT -> throw HoldingIllegalStateException()
             Result.BAD_REQUEST -> throw HoldingBadRequestException()
             Result.NOT_FOUND -> throw HoldingNotFoundException()
@@ -131,7 +130,7 @@ class BidServiceImpl(
             .setUserId(userId).build())
 
         when(response.result.result){
-            Result.OK -> bidRepository.save(findByHoldingId(holdingId).updateExpiredDate(expiredDate).updateStatus(ProcessingStatusType.HOLDING_EXTENDED))
+            Result.OK -> bidRepository.save(findByHoldingId(holdingId).updateExpiredDate(expiredDate).updateStatus(Bid.StatusType.HOLDING_EXTENDED))
             Result.CONFLICT -> throw HoldingIllegalStateException()
             Result.BAD_REQUEST -> throw HoldingBadRequestException()
             Result.NOT_FOUND -> throw HoldingNotFoundException()

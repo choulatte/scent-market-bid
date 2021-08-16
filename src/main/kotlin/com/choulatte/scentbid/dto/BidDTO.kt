@@ -1,8 +1,6 @@
 package com.choulatte.scentbid.dto
 
 import com.choulatte.scentbid.domain.Bid
-import com.choulatte.scentbid.domain.ProcessingStatusType
-import lombok.Getter
 import java.util.*
 
 data class BidDTO(
@@ -11,7 +9,7 @@ data class BidDTO(
     val userId: Long,
     private val accountId: Long,
     private val biddingPrice: Long,
-    private var processingStatus: ProcessingStatusType,
+    private var processingStatus: Bid.StatusType,
     private var holdingId: Long? = null,
     val recordedDate: Date,
     private val lastModifiedDate: Date,

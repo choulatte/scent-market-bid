@@ -1,6 +1,6 @@
 package com.choulatte.scentbid.dto
 
-import com.choulatte.scentbid.domain.ProcessingStatusType
+import com.choulatte.scentbid.domain.Bid
 import java.util.*
 
 data class BidCreateReqDTO(
@@ -19,7 +19,7 @@ data class BidCreateReqDTO(
             recordedDate = Date(),
             lastModifiedDate = Date(),
             expiredDate = this.expiredDate,
-            processingStatus = ProcessingStatusType.INITIALIZED
+            processingStatus = Bid.StatusType.INITIALIZED
         )
 
 }
