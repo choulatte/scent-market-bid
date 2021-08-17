@@ -1,12 +1,13 @@
 package com.choulatte.scentbid.domain
 
 import com.choulatte.scentbid.dto.BidDTO
+import org.springframework.data.annotation.Id
+import org.springframework.data.redis.core.RedisHash
 import java.util.*
 import javax.persistence.*
 import kotlin.RuntimeException
 
-@Entity
-@Table(name = "bid")
+@RedisHash("bid")
 class Bid(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
