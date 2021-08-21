@@ -4,17 +4,17 @@ import com.choulatte.scentbid.domain.Bid
 import java.util.*
 
 data class BidCreateReqDTO(
-    val productId: Long,
-    val userId: Long,
-    val accountId: Long,
+    val productIdx: Long,
+    val userIdx: Long,
+    val accountIdx: Long,
     val biddingPrice: Long,
     val expiredDate: Date
 ){
-    fun toBidDTO(): BidDTO =
+    fun toBidDTO(userIdx: Long): BidDTO =
         BidDTO(
-            productId = this.productId,
-            userId = this.userId,
-            accountId = this.accountId,
+            productIdx = this.productIdx,
+            userIdx = userIdx,
+            accountIdx = this.accountIdx,
             biddingPrice = this.biddingPrice,
             recordedDate = Date(),
             lastModifiedDate = Date(),

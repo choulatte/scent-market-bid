@@ -19,5 +19,6 @@ class BidController
 
 
     @PostMapping(value = ["/product"])
-    fun createBid(@RequestBody bidCreateReqDTO: BidCreateReqDTO): ResponseEntity<BidDTO> = ResponseEntity.ok(bidService.createBid(bidCreateReqDTO))
+    fun createBid(@RequestBody bidCreateReqDTO: BidCreateReqDTO, @RequestHeader(value = "User-Idx") userIdx: Long): ResponseEntity<BidDTO>
+        = ResponseEntity.ok(bidService.createBid(bidCreateReqDTO, userIdx))
 }

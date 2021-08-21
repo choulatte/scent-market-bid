@@ -7,8 +7,8 @@ import org.springframework.stereotype.Repository
 
 
 interface BidRepository : CrudRepository<Bid, Long> {
-    fun findAllByProductId(productId: Long): List<Bid>
-    fun findTopByProductIdOrderByBiddingPriceDesc(productId: Long): Bid?=null
-    fun findByHoldingId(holdingId: Long): Bid
+    fun findAllByProductId(productIdx: Long): List<Bid>
+    fun findTopByProductIdOrderByBiddingPriceDesc(productIdx: Long): Bid?=null
+    fun findByHoldingId(holdingIdx: Long): Bid
     fun findTopByProductIdAndProcessingStatusOrderByRecordedDateDesc(productId: Long, processingStatusType: Bid.StatusType): Bid?= null
 }

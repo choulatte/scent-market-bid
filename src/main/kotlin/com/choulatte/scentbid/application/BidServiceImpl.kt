@@ -26,28 +26,28 @@ class BidServiceImpl(
 
     // 상품별 호가 리스트 조회
     override fun getBidListByProduct(bidReqDTO: BidReqDTO): List<BidDTO> =
-        bidRepository.findAllByProductId(bidReqDTO.productId ?: throw BidRequestNotAvailable()).stream().map(Bid::toDTO).collect(Collectors.toList())
+        bidRepository.findAllByProductId(bidReqDTO.productIdx ?: throw BidRequestNotAvailable()).stream().map(Bid::toDTO).collect(Collectors.toList())
 
 
     // 사용자가 호가를 눌렀을 때 bid를 생성함
     @Transactional
-    override fun createBid(bidCreateReqDTO: BidCreateReqDTO): BidDTO {
+    override fun createBid(bidCreateReqDTO: BidCreateReqDTO, userIdx: Long): BidDTO {
         val stub: PaymentServiceGrpc.PaymentServiceBlockingStub = PaymentServiceGrpc.newBlockingStub(payChannel)
 
-        when(verifyBiddingPrice(bidCreateReqDTO.biddingPrice, bidCreateReqDTO.productId)){
+        when(verifyBiddingPrice(bidCreateReqDTO.biddingPrice, bidCreateReqDTO.productIdx)){
             false -> throw BiddingPriceNotValid()
         }
 
         val response = stub.doHolding(PaymentServiceOuterClass.HoldingRequest.newBuilder()
             .setHolding(PaymentServiceOuterClass.Holding.newBuilder()
-                .setAccountId(bidCreateReqDTO.accountId)
+                .setAccountId(bidCreateReqDTO.accountIdx)
                 .setAmount(bidCreateReqDTO.biddingPrice)
                 .setExpiredDate(bidCreateReqDTO.expiredDate.time)
                 .build())
-            .setUserId(bidCreateReqDTO.userId).build())
+            .setUserId(bidCreateReqDTO.userIdx).build())
 
        when(response.result.result) {
-           Result.OK -> return holdingAndClear(bidCreateReqDTO.toBidDTO(), response.holding.id)
+           Result.OK -> return holdingAndClear(bidCreateReqDTO.toBidDTO(userIdx), response.holding.id)
            Result.CONFLICT -> throw HoldingIllegalStateException()
            Result.BAD_REQUEST -> throw HoldingBadRequestException()
            Result.NOT_FOUND -> throw HoldingNotFoundException()
@@ -57,9 +57,9 @@ class BidServiceImpl(
 
     }
 
-    private fun findByHoldingId(holdingId: Long): Bid = bidRepository.findByHoldingId(holdingId)
+    private fun findByHoldingId(holdingIdx: Long): Bid = bidRepository.findByHoldingId(holdingIdx)
 
-    private fun verifyBiddingPrice(biddingPrice: Long, productId: Long) : Boolean {
+    private fun verifyBiddingPrice(biddingPrice: Long, productIdx: Long) : Boolean {
         val unitPrice: Long = when(biddingPrice){
             in 0 until 5000 -> 100
             in 5000 until 10000 -> 500
@@ -69,7 +69,7 @@ class BidServiceImpl(
             else -> throw BiddingPriceNotValid()
         }
 
-        return checkUnitPrice(biddingPrice, unitPrice) && checkPriceLarger(biddingPrice, productId)
+        return checkUnitPrice(biddingPrice, unitPrice) && checkPriceLarger(biddingPrice, productIdx)
     }
 
     private fun checkUnitPrice(biddingPrice: Long, unitPrice: Long) : Boolean =
@@ -78,8 +78,8 @@ class BidServiceImpl(
             else -> false
         }
 
-    fun checkPriceLarger(biddingPrice: Long, productId: Long) : Boolean =
-         when(val compareTarget = bidRepository.findTopByProductIdOrderByBiddingPriceDesc(productId)) {
+    fun checkPriceLarger(biddingPrice: Long, productIdx: Long) : Boolean =
+         when(val compareTarget = bidRepository.findTopByProductIdOrderByBiddingPriceDesc(productIdx)) {
              null -> true
              else -> when(biddingPrice > compareTarget.getBiddingPrice()) {
                  false -> false
@@ -91,7 +91,7 @@ class BidServiceImpl(
 
     private fun holdingAndClear(bidDTO: BidDTO, holdingId: Long) : BidDTO {
         val bid = bidRepository.save(bidDTO.toEntity().updateHoldingId(holdingId).updateStatus(Bid.StatusType.HOLDING)).toDTO()
-        val clearTarget = bidRepository.findTopByProductIdAndProcessingStatusOrderByRecordedDateDesc(bidDTO.productId, Bid.StatusType.HOLDING) ?: return bid
+        val clearTarget = bidRepository.findTopByProductIdAndProcessingStatusOrderByRecordedDateDesc(bidDTO.productIdx, Bid.StatusType.HOLDING) ?: return bid
 
         clear(clearTarget)
 

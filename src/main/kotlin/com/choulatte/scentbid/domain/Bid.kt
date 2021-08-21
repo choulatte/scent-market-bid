@@ -5,23 +5,22 @@ import org.springframework.data.annotation.Id
 import org.springframework.data.redis.core.RedisHash
 import java.util.*
 import javax.persistence.*
-import kotlin.RuntimeException
 
 @RedisHash("bid")
 class Bid(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "bid_idx")
-    private val bidId: Long? = null,
+    private val bidIdx: Long? = null,
 
     @Column(nullable = false, name = "product_idx")
-    private val productId: Long,
+    private val productIdx: Long,
 
     @Column(name = "user_idx")
-    private val userId: Long,
+    private val userIdx: Long,
 
     @Column(name = "account_idx")
-    private val accountId: Long,
+    private val accountIdx: Long,
 
     @Column(name = "bidding_price")
     private val biddingPrice: Long,
@@ -30,7 +29,7 @@ class Bid(
     private var processingStatus: StatusType,
 
     @Column(name = "holding_id")
-    private var holdingId: Long? = null,
+    private var holdingIdx: Long? = null,
 
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "recorded_date")
@@ -47,13 +46,13 @@ class Bid(
     ) {
     fun toDTO() : BidDTO {
         return BidDTO(
-            bidId = this.bidId,
-            productId = this.productId,
-            userId = this.userId,
-            accountId = this.accountId,
+            bidIdx = this.bidIdx,
+            productIdx = this.productIdx,
+            userIdx = this.userIdx,
+            accountIdx = this.accountIdx,
             biddingPrice = this.biddingPrice,
             processingStatus = this.processingStatus,
-            holdingId = this.holdingId,
+            holdingId = this.holdingIdx,
             recordedDate = this.recordedDate,
             lastModifiedDate = this.lastModifiedDate,
             expiredDate = this.expiredDate
@@ -65,8 +64,8 @@ class Bid(
         return this
     }
 
-    fun updateHoldingId(holdingId: Long): Bid {
-        this.holdingId = holdingId
+    fun updateHoldingId(holdingIdx: Long): Bid {
+        this.holdingIdx = holdingIdx
         return this
     }
 
@@ -75,11 +74,11 @@ class Bid(
         return this
     }
 
-    fun getAccountId(): Long = this.accountId
+    fun getAccountId(): Long = this.accountIdx
 
-    fun getHoldingId(): Long? = this.holdingId
+    fun getHoldingId(): Long? = this.holdingIdx
 
-    fun getUserId(): Long = this.userId
+    fun getUserId(): Long = this.userIdx
 
     fun getBiddingPrice(): Long = this.biddingPrice
 
