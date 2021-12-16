@@ -8,7 +8,8 @@ data class BidCreateReqDTO(
     val userIdx: Long,
     val accountIdx: Long,
     val biddingPrice: Long,
-    val expiredDate: Date
+    val expiredDate: Date,
+    val reqTime: Date
 ){
     fun toBidDTO(userIdx: Long): BidDTO =
         BidDTO(
