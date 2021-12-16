@@ -1,8 +1,8 @@
 package com.choulatte.scentbid.application
 
-import com.choulatte.pay.grpc.PaymentServiceOuterClass.Response.Result
-import com.choulatte.pay.grpc.PaymentServiceGrpc
-import com.choulatte.pay.grpc.PaymentServiceOuterClass
+import com.choulatte.scentpay.grpc.PaymentServiceOuterClass.Response.Result
+import com.choulatte.scentpay.grpc.PaymentServiceGrpc
+import com.choulatte.scentpay.grpc.PaymentServiceOuterClass
 import com.choulatte.scentbid.domain.Bid
 import com.choulatte.scentbid.dto.BidCreateReqDTO
 import com.choulatte.scentbid.dto.BidDTO
@@ -60,6 +60,11 @@ class BidServiceImpl(
     private fun findByHoldingId(holdingIdx: Long): Bid = bidRepository.findByHoldingId(holdingIdx)
 
     private fun verifyBiddingPrice(biddingPrice: Long, productIdx: Long) : Boolean {
+
+        return checkUnitPrice(biddingPrice) && checkPriceLarger(biddingPrice, productIdx)
+    }
+
+    private fun checkUnitPrice(biddingPrice: Long) : Boolean {
         val unitPrice: Long = when(biddingPrice){
             in 0 until 5000 -> 100
             in 5000 until 10000 -> 500
@@ -68,15 +73,11 @@ class BidServiceImpl(
             in 500000 until Long.MAX_VALUE -> 10000
             else -> throw BiddingPriceNotValid()
         }
-
-        return checkUnitPrice(biddingPrice, unitPrice) && checkPriceLarger(biddingPrice, productIdx)
-    }
-
-    private fun checkUnitPrice(biddingPrice: Long, unitPrice: Long) : Boolean =
-        when(biddingPrice % unitPrice) {
+        return when (biddingPrice % unitPrice) {
             0L -> true
             else -> false
         }
+    }
 
     fun checkPriceLarger(biddingPrice: Long, productIdx: Long) : Boolean =
          when(val compareTarget = bidRepository.findTopByProductIdOrderByBiddingPriceDesc(productIdx)) {
