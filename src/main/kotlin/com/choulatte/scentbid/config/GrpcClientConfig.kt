@@ -12,4 +12,8 @@ class GrpcClientConfig {
         return ManagedChannelBuilder.forAddress("172.20.10.3", 8090).usePlaintext().build()
     }
 
+    @Bean(name = ["product"])
+    fun setProductChannel(): ManagedChannel {
+        return ManagedChannelBuilder.forAddress("172.20.10.3", 8090).usePlaintext().build()
+    }
 }
