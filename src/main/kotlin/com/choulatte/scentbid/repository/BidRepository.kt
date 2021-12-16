@@ -2,11 +2,10 @@ package com.choulatte.scentbid.repository
 
 import com.choulatte.scentbid.domain.Bid
 import org.springframework.data.jpa.repository.JpaRepository
-import org.springframework.data.repository.CrudRepository
 import org.springframework.stereotype.Repository
 
-
-interface BidRepository : CrudRepository<Bid, Long> {
+@Repository
+interface BidRepository : JpaRepository<Bid, Long> {
     fun findAllByProductId(productIdx: Long): List<Bid>
     fun findTopByProductIdOrderByBiddingPriceDesc(productIdx: Long): Bid?=null
     fun findByHoldingId(holdingIdx: Long): Bid
