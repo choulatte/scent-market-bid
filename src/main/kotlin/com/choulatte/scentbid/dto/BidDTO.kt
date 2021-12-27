@@ -27,5 +27,4 @@ data class BidDTO(
             lastModifiedDate = Date(),
             expiredDate = this.expiredDate
         )
-
 }

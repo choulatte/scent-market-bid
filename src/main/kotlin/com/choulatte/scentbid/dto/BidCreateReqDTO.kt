@@ -23,4 +23,11 @@ data class BidCreateReqDTO(
             processingStatus = Bid.StatusType.INITIALIZED
         )
 
+    fun toBiddingDTO(): BiddingDTO =
+        BiddingDTO(
+            productId = this.productIdx,
+            userId = this.userIdx,
+            price = this.biddingPrice
+        )
+
 }

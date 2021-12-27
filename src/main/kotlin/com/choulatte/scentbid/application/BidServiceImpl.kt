@@ -7,12 +7,12 @@ import com.choulatte.scentbid.domain.Bid
 import com.choulatte.scentbid.dto.BidCreateReqDTO
 import com.choulatte.scentbid.dto.BidDTO
 import com.choulatte.scentbid.dto.BidReqDTO
+import com.choulatte.scentbid.dto.BiddingDTO
 import com.choulatte.scentbid.exception.*
 import com.choulatte.scentbid.repository.BidRepository
 import io.grpc.ManagedChannel
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import java.util.*
 import java.util.stream.Collectors
 
@@ -20,23 +20,41 @@ import java.util.stream.Collectors
 @Service
 class BidServiceImpl(
     private val bidRepository: BidRepository,
+    private val productService: ProductServiceImpl,
     @Qualifier(value = "pay")
     private val payChannel: ManagedChannel
     ): BidService {
 
     // 상품별 호가 리스트 조회
-    override fun getBidListByProduct(bidReqDTO: BidReqDTO): List<BidDTO> =
-        bidRepository.findAllByProductId(bidReqDTO.productIdx ?: throw BidRequestNotAvailable()).stream().map(Bid::toDTO).collect(Collectors.toList())
+    // 프로덕트 우선 조회(redis) 프로덕트에 없으면 비드 조회
+    override fun getBidListByProduct(bidReqDTO: BidReqDTO): List<BiddingDTO> =
+        when(val product = productService.getProduct(bidReqDTO.productIdx!!)) {
+            null -> bidRepository.findAllByProductId(bidReqDTO.productIdx).stream().map(Bid::toBiddingDTO).collect(Collectors.toList())
+            else -> product.getBiddingList()
+        }
+
+
 
 
     // 사용자가 호가를 눌렀을 때 bid를 생성함
-    @Transactional
+    // 상품이 존재하는가?
+    // 존재하면 진행 -> 레디스에도 저장하고 비드에도 저장함
+    // 문제가 되는 상황 -> 프로덕트는 null, bid에는 있음 -> 어떻게 할 것인가? grpc 통해서 들고오는 것은 시작가밖에 없음. 필요시 현재가도 들고 오게 해야함
     override fun createBid(bidCreateReqDTO: BidCreateReqDTO, userIdx: Long): BidDTO {
-        val stub: PaymentServiceGrpc.PaymentServiceBlockingStub = PaymentServiceGrpc.newBlockingStub(payChannel)
+        val product = try {
+            productService.getProduct(bidCreateReqDTO.productIdx, bidCreateReqDTO.reqTime)
+        } catch (e: Exception) {
+            throw e
+        }
 
         when(verifyBiddingPrice(bidCreateReqDTO.biddingPrice, bidCreateReqDTO.productIdx)){
             false -> throw BiddingPriceNotValid()
         }
+
+        // lastBidding 추가하고 갱신
+        product!!.bidding(bidCreateReqDTO.toBiddingDTO())
+
+        val stub: PaymentServiceGrpc.PaymentServiceBlockingStub = PaymentServiceGrpc.newBlockingStub(payChannel)
 
         val response = stub.doHolding(PaymentServiceOuterClass.HoldingRequest.newBuilder()
             .setHolding(PaymentServiceOuterClass.Holding.newBuilder()
@@ -87,8 +105,6 @@ class BidServiceImpl(
                  true -> true
              }
          }
-
-
 
     private fun holdingAndClear(bidDTO: BidDTO, holdingId: Long) : BidDTO {
         val bid = bidRepository.save(bidDTO.toEntity().updateHoldingId(holdingId).updateStatus(Bid.StatusType.HOLDING)).toDTO()

@@ -1,6 +1,7 @@
 package com.choulatte.scentbid.domain
 
 import com.choulatte.scentbid.dto.BidDTO
+import com.choulatte.scentbid.dto.BiddingDTO
 import java.util.*
 import javax.persistence.*
 
@@ -43,8 +44,8 @@ class Bid(
     private var expiredDate: Date
 
     ) {
-    fun toDTO() : BidDTO {
-        return BidDTO(
+    fun toDTO() : BidDTO =
+        BidDTO(
             bidIdx = this.bidIdx,
             productIdx = this.productIdx,
             userIdx = this.userIdx,
@@ -56,7 +57,13 @@ class Bid(
             lastModifiedDate = this.lastModifiedDate,
             expiredDate = this.expiredDate
         )
-    }
+
+    fun toBiddingDTO() : BiddingDTO =
+        BiddingDTO(
+            productId = this.productIdx,
+            userId =  this.userIdx,
+            price = this.biddingPrice
+        )
 
     fun updateStatus(processingStatus: StatusType): Bid {
         this.processingStatus = processingStatus
