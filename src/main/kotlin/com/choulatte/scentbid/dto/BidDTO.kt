@@ -4,10 +4,10 @@ import com.choulatte.scentbid.domain.Bid
 import java.util.*
 
 data class BidDTO(
-    val bidIdx: Long? = null,
-    val productIdx: Long,
-    val userIdx: Long,
-    private val accountIdx: Long,
+    val bidId: Long? = null,
+    val productId: Long,
+    val userId: Long,
+    private val accountId: Long,
     private val biddingPrice: Long,
     private var processingStatus: Bid.StatusType,
     private var holdingId: Long? = null,
@@ -17,13 +17,13 @@ data class BidDTO(
 ) {
     fun toEntity() : Bid =
         Bid(
-            bidIdx = this.bidIdx,
-            productIdx = this.productIdx,
-            userIdx = this.userIdx,
-            accountIdx = this.accountIdx,
+            bidId = this.bidId,
+            productId = this.productId,
+            userId = this.userId,
+            accountId = this.accountId,
             biddingPrice = this.biddingPrice,
             processingStatus = this.processingStatus,
-            holdingIdx = this.holdingId,
+            holdingId = this.holdingId,
             lastModifiedDate = Date(),
             expiredDate = this.expiredDate
         )

@@ -19,12 +19,12 @@ class ProductServiceImpl(
     private val productRepository: ProductRepository,
     @Qualifier(value = "product")
     private val productChannel: ManagedChannel
-    ) {
+    ): ProductService {
 
-    fun getProduct(productId: Long, reqTime: Date): Product? =
+    override fun getProduct(productId: Long, reqTime: Date): Product? =
         productRepository.findById(productId).orElse(getProductThroughGrpc(productId, reqTime))
 
-    fun getProduct(productId: Long): Product? =
+    override fun getProduct(productId: Long): Product? =
         productRepository.findById(productId).orElse(null);
 
     private fun getProductThroughGrpc(productId: Long, reqTime: Date): Product {

@@ -1,6 +1,6 @@
 package com.choulatte.scentbid.dto
 
 data class BidReqDTO(
-    val productIdx: Long? = null,
-    val userIdx: Long? = null
+    val productId: Long? = null,
+    val userId: Long? = null
 )

@@ -1,5 +1,6 @@
 package com.choulatte.scentbid.domain
 
+import com.choulatte.scentbid.dto.AccountHoldingExtendReqDTO
 import com.choulatte.scentbid.dto.BidDTO
 import com.choulatte.scentbid.dto.BiddingDTO
 import java.util.*
@@ -11,16 +12,16 @@ class Bid(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "bid_idx")
-    private val bidIdx: Long? = null,
+    private val bidId: Long? = null,
 
     @Column(nullable = false, name = "product_idx")
-    private val productIdx: Long,
+    private val productId: Long,
 
     @Column(name = "user_idx")
-    private val userIdx: Long,
+    private val userId: Long,
 
     @Column(name = "account_idx")
-    private val accountIdx: Long,
+    private val accountId: Long,
 
     @Column(name = "bidding_price")
     private val biddingPrice: Long,
@@ -29,7 +30,7 @@ class Bid(
     private var processingStatus: StatusType,
 
     @Column(name = "holding_id")
-    private var holdingIdx: Long? = null,
+    private var holdingId: Long? = null,
 
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "recorded_date")
@@ -46,13 +47,13 @@ class Bid(
     ) {
     fun toDTO() : BidDTO =
         BidDTO(
-            bidIdx = this.bidIdx,
-            productIdx = this.productIdx,
-            userIdx = this.userIdx,
-            accountIdx = this.accountIdx,
+            bidId = this.bidId,
+            productId = this.productId,
+            userId = this.userId,
+            accountId = this.accountId,
             biddingPrice = this.biddingPrice,
             processingStatus = this.processingStatus,
-            holdingId = this.holdingIdx,
+            holdingId = this.holdingId,
             recordedDate = this.recordedDate,
             lastModifiedDate = this.lastModifiedDate,
             expiredDate = this.expiredDate
@@ -60,31 +61,41 @@ class Bid(
 
     fun toBiddingDTO() : BiddingDTO =
         BiddingDTO(
-            productId = this.productIdx,
-            userId =  this.userIdx,
-            price = this.biddingPrice
+            productId = this.productId,
+            userId =  this.userId,
+            price = this.biddingPrice,
+            accountId = this.accountId,
+            holdingId = this.holdingId
         )
 
-    fun updateStatus(processingStatus: StatusType): Bid {
+    fun toAccountHoldingExtendDTO(expiredDate: Date): AccountHoldingExtendReqDTO =
+        AccountHoldingExtendReqDTO(
+            accountId = this.accountId,
+            userId = this.userId,
+            holdingId = this.holdingId!!,
+            expiredDate = expiredDate
+        )
+
+    fun setStatus(processingStatus: StatusType): Bid {
         this.processingStatus = processingStatus
         return this
     }
 
-    fun updateHoldingId(holdingIdx: Long): Bid {
-        this.holdingIdx = holdingIdx
+    fun setHoldingId(holdingIdx: Long): Bid {
+        this.holdingId = holdingIdx
         return this
     }
 
-    fun updateExpiredDate(expiredDate: Date): Bid {
+    fun setExpiredDate(expiredDate: Date): Bid {
         this.expiredDate = expiredDate
         return this
     }
 
-    fun getAccountId(): Long = this.accountIdx
+    fun getAccountId(): Long = this.accountId
 
-    fun getHoldingId(): Long? = this.holdingIdx
+    fun getHoldingId(): Long? = this.holdingId
 
-    fun getUserId(): Long = this.userIdx
+    fun getUserId(): Long = this.userId
 
     fun getBiddingPrice(): Long = this.biddingPrice
 

@@ -2,6 +2,7 @@ package com.choulatte.scentbid.domain
 
 import com.choulatte.scentbid.dto.BiddingDTO
 import com.choulatte.scentbid.exception.TimeNotValid
+import org.springframework.data.annotation.Id
 import java.util.*
 import org.springframework.data.redis.core.RedisHash
 import javax.persistence.*

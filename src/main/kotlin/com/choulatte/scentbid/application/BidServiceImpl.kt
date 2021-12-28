@@ -4,10 +4,7 @@ import com.choulatte.scentpay.grpc.PaymentServiceOuterClass.Response.Result
 import com.choulatte.scentpay.grpc.PaymentServiceGrpc
 import com.choulatte.scentpay.grpc.PaymentServiceOuterClass
 import com.choulatte.scentbid.domain.Bid
-import com.choulatte.scentbid.dto.BidCreateReqDTO
-import com.choulatte.scentbid.dto.BidDTO
-import com.choulatte.scentbid.dto.BidReqDTO
-import com.choulatte.scentbid.dto.BiddingDTO
+import com.choulatte.scentbid.dto.*
 import com.choulatte.scentbid.exception.*
 import com.choulatte.scentbid.repository.BidRepository
 import io.grpc.ManagedChannel
@@ -20,7 +17,8 @@ import java.util.stream.Collectors
 @Service
 class BidServiceImpl(
     private val bidRepository: BidRepository,
-    private val productService: ProductServiceImpl,
+    private val productService: ProductService,
+    private val holdingService: HoldingService,
     @Qualifier(value = "pay")
     private val payChannel: ManagedChannel
     ): BidService {
@@ -28,58 +26,58 @@ class BidServiceImpl(
     // 상품별 호가 리스트 조회
     // 프로덕트 우선 조회(redis) 프로덕트에 없으면 비드 조회
     override fun getBidListByProduct(bidReqDTO: BidReqDTO): List<BiddingDTO> =
-        when(val product = productService.getProduct(bidReqDTO.productIdx!!)) {
-            null -> bidRepository.findAllByProductId(bidReqDTO.productIdx).stream().map(Bid::toBiddingDTO).collect(Collectors.toList())
+        when(val product = productService.getProduct(bidReqDTO.productId!!)) {
+            null -> bidRepository.findAllByProductId(bidReqDTO.productId).stream().map(Bid::toBiddingDTO).collect(Collectors.toList())
             else -> product.getBiddingList()
         }
-
-
 
 
     // 사용자가 호가를 눌렀을 때 bid를 생성함
     // 상품이 존재하는가?
     // 존재하면 진행 -> 레디스에도 저장하고 비드에도 저장함
     // 문제가 되는 상황 -> 프로덕트는 null, bid에는 있음 -> 어떻게 할 것인가? grpc 통해서 들고오는 것은 시작가밖에 없음. 필요시 현재가도 들고 오게 해야함
-    override fun createBid(bidCreateReqDTO: BidCreateReqDTO, userIdx: Long): BidDTO {
+    override fun createBid(bidCreateReqDTO: BidCreateReqDTO, userId: Long): BidDTO {
         val product = try {
-            productService.getProduct(bidCreateReqDTO.productIdx, bidCreateReqDTO.reqTime)
+            productService.getProduct(bidCreateReqDTO.productId, bidCreateReqDTO.reqTime)
         } catch (e: Exception) {
             throw e
-        }
+        }!!
 
-        when(verifyBiddingPrice(bidCreateReqDTO.biddingPrice, bidCreateReqDTO.productIdx)){
+        when(verifyBiddingPrice(bidCreateReqDTO.biddingPrice, bidCreateReqDTO.productId, product.getLastBidding())){
             false -> throw BiddingPriceNotValid()
         }
 
-        // lastBidding 추가하고 갱신
-        product!!.bidding(bidCreateReqDTO.toBiddingDTO())
+        val toClear = product.getLastBidding()
+        val holdingId = holdingService.holdAccount(bidCreateReqDTO.toAccountHoldReqDTO())
+        var bid = bidCreateReqDTO.toBidDTO(userId, holdingId)
 
-        val stub: PaymentServiceGrpc.PaymentServiceBlockingStub = PaymentServiceGrpc.newBlockingStub(payChannel)
+        // holding
+        bid = updateBidHolding(bid, holdingId).toDTO()
 
-        val response = stub.doHolding(PaymentServiceOuterClass.HoldingRequest.newBuilder()
-            .setHolding(PaymentServiceOuterClass.Holding.newBuilder()
-                .setAccountId(bidCreateReqDTO.accountIdx)
-                .setAmount(bidCreateReqDTO.biddingPrice)
-                .setExpiredDate(bidCreateReqDTO.expiredDate.time)
-                .build())
-            .setUserId(bidCreateReqDTO.userIdx).build())
+        //clear
+        updateBidHoldingClear(bidCreateReqDTO.productId, toClear)
 
-       when(response.result.result) {
-           Result.OK -> return holdingAndClear(bidCreateReqDTO.toBidDTO(userIdx), response.holding.id)
-           Result.CONFLICT -> throw HoldingIllegalStateException()
-           Result.BAD_REQUEST -> throw HoldingBadRequestException()
-           Result.NOT_FOUND -> throw HoldingNotFoundException()
-           // Create Holding Illegal State Exception
-           else -> throw GrpcIllegalStateException()
-       }
-
+        return bid
     }
 
-    private fun findByHoldingId(holdingIdx: Long): Bid = bidRepository.findByHoldingId(holdingIdx)
+    private fun updateBidHolding(bidDTO: BidDTO, holdingId: Long): Bid =
+        bidRepository.save(bidDTO.toEntity().setHoldingId(holdingId).setStatus(Bid.StatusType.HOLDING))
 
-    private fun verifyBiddingPrice(biddingPrice: Long, productIdx: Long) : Boolean {
+    private fun updateBidHoldingClear(productId: Long, toClear: BiddingDTO?): Boolean {
+        if(toClear != null){
+            if(holdingService.clearAccount(toClear.toAccountHoldingClearReqDTO())) {
+                val bidToClear = bidRepository.findByProductIdAndBiddingPrice(productId, toClear.price)
+                bidRepository.save(bidToClear.setStatus(Bid.StatusType.HOLDING_CLEARED))
+            }
+            else return false
+        }
+        return true
+    }
 
-        return checkUnitPrice(biddingPrice) && checkPriceLarger(biddingPrice, productIdx)
+
+    private fun verifyBiddingPrice(biddingPrice: Long, productIdx: Long, lastBidding: BiddingDTO?) : Boolean {
+
+        return checkUnitPrice(biddingPrice) && checkPriceLarger(biddingPrice, lastBidding)
     }
 
     private fun checkUnitPrice(biddingPrice: Long) : Boolean {
@@ -97,64 +95,21 @@ class BidServiceImpl(
         }
     }
 
-    fun checkPriceLarger(biddingPrice: Long, productIdx: Long) : Boolean =
-         when(val compareTarget = bidRepository.findTopByProductIdOrderByBiddingPriceDesc(productIdx)) {
+    private fun checkPriceLarger(biddingPrice: Long, lastBidding: BiddingDTO?) : Boolean =
+         when(lastBidding) {
              null -> true
-             else -> when(biddingPrice > compareTarget.getBiddingPrice()) {
+             else -> when(biddingPrice > lastBidding.price) {
                  false -> false
                  true -> true
              }
          }
 
-    private fun holdingAndClear(bidDTO: BidDTO, holdingId: Long) : BidDTO {
-        val bid = bidRepository.save(bidDTO.toEntity().updateHoldingId(holdingId).updateStatus(Bid.StatusType.HOLDING)).toDTO()
-        val clearTarget = bidRepository.findTopByProductIdAndProcessingStatusOrderByRecordedDateDesc(bidDTO.productIdx, Bid.StatusType.HOLDING) ?: return bid
+    private fun getBidByHoldingId(holdingIdx: Long): Bid = bidRepository.findByHoldingId(holdingIdx)
+    private fun getSuccessfulBid(productId: Long): Bid = bidRepository.findSuccessfulBid(productId)
 
-        clear(clearTarget)
-
-        return  bid
-    }
-
-    private fun clear(clearTarget: Bid) {
-        val stub: PaymentServiceGrpc.PaymentServiceBlockingStub = PaymentServiceGrpc.newBlockingStub(payChannel)
-
-        val response = stub.clearHolding(PaymentServiceOuterClass.HoldingRequest.newBuilder()
-            .setHolding(PaymentServiceOuterClass.Holding.newBuilder()
-                .setAccountId(clearTarget.getAccountId())
-                .setId(clearTarget.getHoldingId() ?: throw IllegalArgumentException("There is no holdingId to clear!"))
-                .build())
-            .setUserId(clearTarget.getUserId()).build())
-
-        when(response.result){
-            Result.OK -> bidRepository.save(clearTarget.updateStatus(Bid.StatusType.HOLDING_CLEARED))
-            Result.CONFLICT -> throw HoldingIllegalStateException()
-            Result.BAD_REQUEST -> throw HoldingBadRequestException()
-            Result.NOT_FOUND -> throw HoldingNotFoundException()
-            // Holding Clear Illegal State Exception
-            else -> throw GrpcIllegalStateException()
-        }
-    }
-
-    private fun updateHoldingExpiredDate(holdingId: Long, accountId:Long, userId: Long, expiredDate: Date) : Boolean {
-        val stub: PaymentServiceGrpc.PaymentServiceBlockingStub = PaymentServiceGrpc.newBlockingStub(payChannel)
-
-        val response = stub.extendHolding(PaymentServiceOuterClass.HoldingRequest.newBuilder()
-            .setHolding(PaymentServiceOuterClass.Holding.newBuilder()
-                .setId(holdingId)
-                .setAccountId(accountId)
-                .setExpiredDate(expiredDate.time)
-                .build())
-            .setUserId(userId).build())
-
-        when(response.result.result){
-            Result.OK -> bidRepository.save(findByHoldingId(holdingId).updateExpiredDate(expiredDate).updateStatus(Bid.StatusType.HOLDING_EXTENDED))
-            Result.CONFLICT -> throw HoldingIllegalStateException()
-            Result.BAD_REQUEST -> throw HoldingBadRequestException()
-            Result.NOT_FOUND -> throw HoldingNotFoundException()
-            // Holding Extend Illegal State Exception
-            else -> throw GrpcIllegalStateException()
-        }
-
-        return true
+    private fun updateBidHoldingExpiredDate(productId: Long, expiredDate: Date) {
+        val bid = getSuccessfulBid(productId)
+        holdingService.extendAccountHolding(bid.toAccountHoldingExtendDTO(expiredDate))
+        bidRepository.save(bid.setExpiredDate(expiredDate))
     }
 }
