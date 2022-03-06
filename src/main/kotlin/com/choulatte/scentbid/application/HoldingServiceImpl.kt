@@ -1,6 +1,5 @@
 package com.choulatte.scentbid.application
 
-import com.choulatte.scentbid.domain.Bid
 import com.choulatte.scentbid.dto.AccountHoldReqDTO
 import com.choulatte.scentbid.dto.AccountHoldingClearReqDTO
 import com.choulatte.scentbid.dto.AccountHoldingExtendReqDTO
@@ -13,8 +12,6 @@ import com.choulatte.scentpay.grpc.PaymentServiceOuterClass
 import io.grpc.ManagedChannel
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
-import java.util.*
-
 @Service
 class HoldingServiceImpl(
     @Qualifier(value = "pay")
