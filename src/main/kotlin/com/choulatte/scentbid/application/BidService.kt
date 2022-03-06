@@ -6,7 +6,7 @@ import com.choulatte.scentbid.dto.BidReqDTO
 import com.choulatte.scentbid.dto.BiddingDTO
 
 interface BidService {
-    fun getBidListByProduct(bidReqDTO: BidReqDTO): List<BiddingDTO>
+    fun getBidListByProduct(productId: Long): List<BiddingDTO>
 
-    fun createBid(bidCreateReqDTO: BidCreateReqDTO, userIdx: Long): BidDTO
+    fun createBid(bidCreateReqDTO: BidCreateReqDTO, userIdx: Long, productId: Long): BidDTO
 }

@@ -15,11 +15,11 @@ import org.springframework.web.bind.annotation.*
 class BidController
     (private val bidService: BidService){
 
-    @GetMapping(value = ["/product"])
-    fun getProductBids(@RequestBody bidReqDTO: BidReqDTO): ResponseEntity<List<BiddingDTO>> = ResponseEntity.ok(bidService.getBidListByProduct(bidReqDTO))
+    @GetMapping(value = ["/{productId}"])
+    fun getProductBids(@PathVariable("productId")productId: Long): ResponseEntity<List<BiddingDTO>> = ResponseEntity.ok(bidService.getBidListByProduct(productId))
 
 
-    @PostMapping(value = ["/product"])
-    fun createBid(@RequestBody bidCreateReqDTO: BidCreateReqDTO, @RequestHeader(value = "User-Idx") userIdx: Long): ResponseEntity<BidDTO>
-        = ResponseEntity.ok(bidService.createBid(bidCreateReqDTO, userIdx))
+    @PostMapping(value = ["/{productId}"])
+    fun createBid(@RequestBody bidCreateReqDTO: BidCreateReqDTO, @RequestHeader(value = "User-Idx") userIdx: Long, @PathVariable("productId")productId: Long): ResponseEntity<BidDTO>
+        = ResponseEntity.ok(bidService.createBid(bidCreateReqDTO, userIdx, productId))
 }

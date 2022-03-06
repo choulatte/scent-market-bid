@@ -9,7 +9,9 @@ import com.choulatte.scentbid.exception.*
 import com.choulatte.scentbid.repository.BidRepository
 import io.grpc.ManagedChannel
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
+import org.springframework.web.bind.annotation.ResponseStatus
 import java.util.*
 import java.util.stream.Collectors
 
@@ -25,9 +27,9 @@ class BidServiceImpl(
 
     // 상품별 호가 리스트 조회
     // 프로덕트 우선 조회(redis) 프로덕트에 없으면 비드 조회
-    override fun getBidListByProduct(bidReqDTO: BidReqDTO): List<BiddingDTO> =
-        when(val product = productService.getProduct(bidReqDTO.productId!!)) {
-            null -> bidRepository.findAllByProductId(bidReqDTO.productId).stream().map(Bid::toBiddingDTO).collect(Collectors.toList())
+    override fun getBidListByProduct(productId: Long): List<BiddingDTO> =
+        when(val product = productService.getProduct(productId)) {
+            null -> bidRepository.findAllByProductId(productId).stream().map(Bid::toBiddingDTO).collect(Collectors.toList())
             else -> product.getBiddingList()
         }
 
@@ -36,7 +38,8 @@ class BidServiceImpl(
     // 상품이 존재하는가?
     // 존재하면 진행 -> 레디스에도 저장하고 비드에도 저장함
     // 문제가 되는 상황 -> 프로덕트는 null, bid에는 있음 -> 어떻게 할 것인가? grpc 통해서 들고오는 것은 시작가밖에 없음. 필요시 현재가도 들고 오게 해야함
-    override fun createBid(bidCreateReqDTO: BidCreateReqDTO, userId: Long): BidDTO {
+    override fun createBid(bidCreateReqDTO: BidCreateReqDTO, userId: Long, productId: Long): BidDTO {
+        if(productId != bidCreateReqDTO.productId) throw Exception()
         val product = try {
             productService.getProduct(bidCreateReqDTO.productId, bidCreateReqDTO.reqTime)
         } catch (e: Exception) {
